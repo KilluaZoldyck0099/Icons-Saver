@@ -52,18 +52,35 @@ at `src/IconsSaver.Cli/bin/Release/net8.0-windows/iconssaver-cli.exe`.
 
 Run the app, press **Save now**, and you have a layout to come back to.
 
-### A portable build
+### Building something you can hand to someone else
 
-Those are build outputs and need the files around them. For two self-contained
-executables you can drop anywhere:
+Those are build outputs and need the files around them. There are two ways to package it
+as a single file, and the difference matters if you are sending it to another machine.
+
+**Standalone** — carries the .NET runtime inside it, so it runs on any 64-bit Windows 10
+or 11 with nothing installed at all:
 
 ```powershell
-dotnet publish src/IconsSaver.App/IconsSaver.App.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o publish
-dotnet publish src/IconsSaver.Cli/IconsSaver.Cli.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o publish
+dotnet publish src/IconsSaver.App/IconsSaver.App.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=none -o publish-standalone
+dotnet publish src/IconsSaver.Cli/IconsSaver.Cli.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=none -o publish-standalone
 ```
 
-That leaves `publish\IconsSaver.exe` and `publish\iconssaver-cli.exe`, each a single file
-that only needs the .NET 8 Desktop Runtime installed.
+Roughly 69 MB for the app and 34 MB for the CLI.
+
+**Framework-dependent** — around 0.6 MB and 0.25 MB, but the machine needs the
+[.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) installed.
+Swap `--self-contained true` for `false` and drop the compression flags.
+
+Either way the result is one file per tool with nothing beside it.
+
+Two things to warn whoever you send it to:
+
+- **SmartScreen.** The executables are unsigned, so the first run shows "Windows protected
+  your PC". They have to click **More info → Run anyway**. Code signing is the only real
+  fix and it costs money.
+- **Antivirus.** Icons Saver writes into explorer's memory to move the icons — that is the
+  only way to do this at all — and some products flag that pattern generically. See
+  [SECURITY.md](SECURITY.md) for exactly what it does and where that code lives.
 
 ## Command line
 

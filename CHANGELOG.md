@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   gets, does not count against the history limit, and refuses to be deleted until it is
   unlocked.
 
+- A standalone build. Releases now ship two zips: a small framework-dependent one, and a
+  self-contained one that carries the .NET runtime and runs on a machine with nothing
+  installed.
+
 ### Fixed
 
 - The CLI was named `iconssaver.exe` and the tray app `IconsSaver.exe`. Windows treats
