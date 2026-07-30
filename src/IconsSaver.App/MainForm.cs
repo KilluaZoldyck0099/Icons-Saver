@@ -14,6 +14,9 @@ internal sealed class MainForm : Form
     /// <summary>Width reserved for the preview and details column.</summary>
     private const int DetailsPanelWidth = 400;
 
+    /// <summary>Shown in the lock column for a layout that is protected from pruning and deletion.</summary>
+    private const string LockGlyph = "\U0001F512";
+
     private readonly Workspace _workspace;
 
     private readonly ListView _list = new();
@@ -24,6 +27,7 @@ internal sealed class MainForm : Form
 
     private readonly ToolStripButton _restoreButton = new();
     private readonly ToolStripButton _previewButton = new();
+    private readonly ToolStripButton _lockButton = new();
     private readonly ToolStripButton _renameButton = new();
     private readonly ToolStripButton _deleteButton = new();
     private readonly ToolStripButton _exportButton = new();
@@ -42,6 +46,7 @@ internal sealed class MainForm : Form
 
         BuildLayout();
         WireEvents();
+        Theme.Apply(this);
         Reload();
     }
 
@@ -51,6 +56,14 @@ internal sealed class MainForm : Form
     /// <summary>Raised when the user asks to quit the whole application.</summary>
     public event EventHandler? ExitRequested;
 
+    /// <summary>Re-applies the palette after the user changed it in settings.</summary>
+    public void RefreshTheme()
+    {
+        Theme.Apply(this);
+        _list.Invalidate();
+        _preview.Invalidate();
+    }
+
     private void BuildLayout()
     {
         _list.View = View.Details;
@@ -58,11 +71,16 @@ internal sealed class MainForm : Form
         _list.MultiSelect = false;
         _list.HideSelection = false;
         _list.Dock = DockStyle.Fill;
-        _list.Columns.Add("Name", 200);
-        _list.Columns.Add("Icons", 56, HorizontalAlignment.Right);
-        _list.Columns.Add("Captured", 130);
-        _list.Columns.Add("Display", 150);
-        _list.Columns.Add("Source", 64);
+
+        // Owner drawn throughout: a list view's column headers and selection bar are painted by the
+        // theme engine and ignore BackColor entirely, so on a dark window they stay stubbornly white.
+        _list.OwnerDraw = true;
+        _list.Columns.Add("Name", 184);
+        _list.Columns.Add("Icons", 52, HorizontalAlignment.Right);
+        _list.Columns.Add("Captured", 124);
+        _list.Columns.Add("Display", 144);
+        _list.Columns.Add("Source", 66);
+        _list.Columns.Add("Lock", 46, HorizontalAlignment.Center);
 
         _preview.Dock = DockStyle.Fill;
 
@@ -82,9 +100,6 @@ internal sealed class MainForm : Form
         _split.Dock = DockStyle.Fill;
         _split.Panel1MinSize = 380;
         _split.Panel2MinSize = 340;
-
-        // The details column has a fixed amount to say, so it keeps its width and the list of
-        // layouts takes everything the window gains.
         _split.FixedPanel = FixedPanel.Panel2;
         _split.Panel1.Controls.Add(_list);
         _split.Panel2.Controls.Add(rightPanel);
@@ -93,7 +108,6 @@ internal sealed class MainForm : Form
         {
             GripStyle = ToolStripGripStyle.Hidden,
             Padding = new Padding(6, 4, 6, 4),
-            RenderMode = ToolStripRenderMode.System,
         };
 
         toolStrip.Items.Add(Button("Save now", OnSaveNow));
@@ -101,6 +115,7 @@ internal sealed class MainForm : Form
         toolStrip.Items.Add(Configure(_restoreButton, "Restore", OnRestore));
         toolStrip.Items.Add(Configure(_previewButton, "What would change?", OnPreviewChanges));
         toolStrip.Items.Add(new ToolStripSeparator());
+        toolStrip.Items.Add(Configure(_lockButton, "Lock", OnToggleLock));
         toolStrip.Items.Add(Configure(_renameButton, "Rename", OnRename));
         toolStrip.Items.Add(Configure(_deleteButton, "Delete", OnDelete));
         toolStrip.Items.Add(new ToolStripSeparator());
@@ -143,12 +158,74 @@ internal sealed class MainForm : Form
     {
         _list.SelectedIndexChanged += (_, _) => OnSelectionChanged();
         _list.DoubleClick += OnRestore;
+        _list.DrawColumnHeader += OnDrawColumnHeader;
+        _list.DrawItem += (_, e) => e.DrawDefault = false;
+        _list.DrawSubItem += OnDrawSubItem;
 
         _workspace.SnapshotsChanged += (_, _) => BeginInvoke(Reload);
         _workspace.Status += (_, message) => BeginInvoke(() => _status.Text = message);
 
         FormClosing += OnFormClosing;
     }
+
+    // ------------------------------------------------------------------ painting
+
+    private void OnDrawColumnHeader(object? sender, DrawListViewColumnHeaderEventArgs e)
+    {
+        using var background = new SolidBrush(Theme.Background);
+        e.Graphics.FillRectangle(background, e.Bounds);
+
+        using var separator = new Pen(Theme.Border);
+        e.Graphics.DrawLine(separator, e.Bounds.Right - 1, e.Bounds.Top + 4, e.Bounds.Right - 1, e.Bounds.Bottom - 4);
+        e.Graphics.DrawLine(separator, e.Bounds.Left, e.Bounds.Bottom - 1, e.Bounds.Right, e.Bounds.Bottom - 1);
+
+        TextRenderer.DrawText(
+            e.Graphics,
+            e.Header?.Text ?? string.Empty,
+            e.Font ?? Font,
+            Rectangle.Inflate(e.Bounds, -6, 0),
+            Theme.TextMuted,
+            FlagsFor(e.Header?.TextAlign ?? HorizontalAlignment.Left));
+    }
+
+    private void OnDrawSubItem(object? sender, DrawListViewSubItemEventArgs e)
+    {
+        bool selected = e.Item?.Selected == true;
+
+        Color background = selected
+            ? Theme.Selection
+            : e.ItemIndex % 2 == 0 ? Theme.Surface : Theme.SurfaceAlternate;
+
+        using var brush = new SolidBrush(background);
+        e.Graphics.FillRectangle(brush, e.Bounds);
+
+        // A row whose layout belongs to another display setup is greyed; the item carries that.
+        Color foreground = selected
+            ? Theme.SelectionText
+            : e.Item?.ForeColor == SystemColors.GrayText ? Theme.TextMuted : Theme.Text;
+
+        TextRenderer.DrawText(
+            e.Graphics,
+            e.SubItem?.Text ?? string.Empty,
+            _list.Font,
+            Rectangle.Inflate(e.Bounds, -6, 0),
+            foreground,
+            FlagsFor(_list.Columns[e.ColumnIndex].TextAlign));
+    }
+
+    private static TextFormatFlags FlagsFor(HorizontalAlignment alignment)
+    {
+        TextFormatFlags flags = TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix;
+
+        return alignment switch
+        {
+            HorizontalAlignment.Right => flags | TextFormatFlags.Right,
+            HorizontalAlignment.Center => flags | TextFormatFlags.HorizontalCenter,
+            _ => flags | TextFormatFlags.Left,
+        };
+    }
+
+    // ------------------------------------------------------------------- the list
 
     /// <summary>Rereads both layout folders and rebuilds the list.</summary>
     public void Reload()
@@ -173,16 +250,12 @@ internal sealed class MainForm : Form
                 snapshot.CapturedAt.LocalDateTime.ToString("g", CultureInfo.CurrentCulture),
                 matches ? snapshot.Display.Describe() : $"{snapshot.Display.Describe()} *",
                 item.SourceLabel,
+                snapshot.IsPinned ? LockGlyph : string.Empty,
             })
             {
                 Tag = item,
-                ToolTipText = matches ? null : "Saved on a different display setup.",
+                ForeColor = matches ? SystemColors.ControlText : SystemColors.GrayText,
             };
-
-            if (!matches)
-            {
-                row.ForeColor = SystemColors.GrayText;
-            }
 
             _list.Items.Add(row);
         }
@@ -199,9 +272,13 @@ internal sealed class MainForm : Form
         }
 
         OnSelectionChanged();
+
+        int locked = _items.Count(i => i.Snapshot.IsPinned);
         _status.Text = _items.Count == 0
             ? "No layouts saved yet. Press 'Save now' to capture the desktop as it is."
-            : $"{_items.Count} saved layouts.";
+            : locked == 0
+                ? $"{_items.Count} saved layouts."
+                : $"{_items.Count} saved layouts, {locked} locked.";
     }
 
     private void OnSelectionChanged()
@@ -210,10 +287,12 @@ internal sealed class MainForm : Form
 
         _restoreButton.Enabled = item is not null;
         _previewButton.Enabled = item is not null;
+        _lockButton.Enabled = item is not null;
         _renameButton.Enabled = item is not null;
         _deleteButton.Enabled = item is not null;
         _exportButton.Enabled = item is not null;
 
+        _lockButton.Text = item?.Snapshot.IsPinned == true ? "Unlock" : "Lock";
         _preview.Snapshot = item?.Snapshot;
 
         if (item is null)
@@ -234,6 +313,11 @@ internal sealed class MainForm : Form
             $"Source     {item.SourceLabel}, Icons Saver {snapshot.AppVersion}",
         };
 
+        if (snapshot.IsPinned)
+        {
+            lines.Add("Locked     protected from automatic pruning and from deletion");
+        }
+
         if (!string.IsNullOrWhiteSpace(snapshot.Note))
         {
             lines.Add($"Note       {snapshot.Note}");
@@ -241,6 +325,8 @@ internal sealed class MainForm : Form
 
         _details.Text = string.Join(Environment.NewLine, lines);
     }
+
+    // ------------------------------------------------------------------- actions
 
     private void OnSaveNow(object? sender, EventArgs e)
     {
@@ -252,6 +338,31 @@ internal sealed class MainForm : Form
             _workspace.SaveNow(name);
             Reload();
         }
+    }
+
+    /// <summary>
+    /// Locks or unlocks the selected layout.
+    /// </summary>
+    /// <remarks>
+    /// Locking is what stops the automatic history quietly eating a layout worth keeping: the
+    /// pruner skips locked layouts however old they are, and deletion refuses outright.
+    /// </remarks>
+    private void OnToggleLock(object? sender, EventArgs e)
+    {
+        SnapshotListItem? item = SelectedItem();
+        if (item is null)
+        {
+            return;
+        }
+
+        item.Snapshot.IsPinned = !item.Snapshot.IsPinned;
+        item.Store.Save(item.Snapshot);
+
+        _status.Text = item.Snapshot.IsPinned
+            ? $"'{item.Snapshot.DisplayName}' is locked and will not be pruned or deleted."
+            : $"'{item.Snapshot.DisplayName}' is unlocked.";
+
+        Reload();
     }
 
     private void OnRestore(object? sender, EventArgs e)
@@ -375,6 +486,17 @@ internal sealed class MainForm : Form
         SnapshotListItem? item = SelectedItem();
         if (item is null)
         {
+            return;
+        }
+
+        if (item.Snapshot.IsPinned)
+        {
+            MessageBox.Show(
+                this,
+                $"'{item.Snapshot.DisplayName}' is locked.\n\nUnlock it first if you really want it gone.",
+                AppInfo.Name,
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
             return;
         }
 
