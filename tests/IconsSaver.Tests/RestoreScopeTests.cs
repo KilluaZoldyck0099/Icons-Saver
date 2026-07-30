@@ -96,7 +96,7 @@ public sealed class RestoreScopeTests
     public void A_monitor_scope_admits_only_that_monitors_icons()
     {
         DisplayFingerprint display = Display();
-        RestoreScope scope = RestoreScope.ForMonitor(Portrait);
+        RestoreScope scope = RestoreScope.ForMonitor(display, Portrait);
 
         Assert.True(scope.Includes(new IconEntry("on the portrait", 13, 695, 0), display));
         Assert.False(scope.Includes(new IconEntry("on the primary", 1453, 1184, 1), display));
@@ -104,38 +104,52 @@ public sealed class RestoreScopeTests
     }
 
     [Fact]
-    public void A_monitor_that_is_no_longer_in_the_snapshot_restores_nothing()
+    public void A_monitor_whose_device_id_is_blank_still_scopes_to_that_monitor()
     {
-        // The safe reading of "restore the monitor that is not there" is to move nothing at all,
-        // certainly not to fall back to moving everything.
+        // Regression. Windows declines to report a device interface path in several situations, and
+        // MonitorDescriptor.DeviceId is then empty. An earlier version resolved a monitor scope by
+        // looking that id up, which made an empty one indistinguishable from "no scope at all" —
+        // so clicking a single screen quietly restored the entire desktop.
         DisplayFingerprint display = Display();
-        var scope = new RestoreScope { MonitorDeviceId = "DISPLAY#GONE" };
+        var anonymous = new MonitorDescriptor(@"\\.\DISPLAY9", string.Empty, -1440, -387, 1440, 2560, false, 96);
+
+        RestoreScope scope = RestoreScope.ForMonitor(display, anonymous);
 
         Assert.False(scope.IsEverything);
-        Assert.Equal(new IconRegion(0, 0, 0, 0), scope.Resolve(display));
-        Assert.False(scope.Includes(new IconEntry("anything", 13, 695, 0), display));
+        Assert.Equal(new IconRegion(0, 693, 1440, 2560), scope.Resolve(display));
+        Assert.False(scope.Includes(new IconEntry("on the primary", 1453, 1184, 0), display));
     }
 
     [Fact]
-    public void An_explicit_region_wins_over_a_monitor_id()
+    public void A_monitor_scope_keeps_its_region_even_if_the_monitor_list_changes()
     {
+        // The region is resolved when the scope is made, so nothing can later reinterpret it.
         DisplayFingerprint display = Display();
-        var scope = new RestoreScope
+        RestoreScope scope = RestoreScope.ForMonitor(display, Portrait);
+
+        var reduced = new DisplayFingerprint
         {
-            Region = new IconRegion(0, 0, 10, 10),
-            MonitorDeviceId = Primary.DeviceId,
+            VirtualLeft = display.VirtualLeft,
+            VirtualTop = display.VirtualTop,
+            VirtualWidth = display.VirtualWidth,
+            VirtualHeight = display.VirtualHeight,
+            Monitors = new[] { Primary },
         };
 
-        Assert.Equal(new IconRegion(0, 0, 10, 10), scope.Resolve(display));
+        Assert.Equal(new IconRegion(0, 693, 1440, 2560), scope.Resolve(reduced));
     }
 
     [Fact]
-    public void Device_ids_are_matched_without_regard_to_case()
+    public void Regions_that_touch_but_do_not_overlap_do_not_intersect()
     {
         DisplayFingerprint display = Display();
-        var scope = new RestoreScope { MonitorDeviceId = "display#portrait" };
+        IconRegion portrait = IconRegion.ForMonitor(display, Portrait);
+        IconRegion primary = IconRegion.ForMonitor(display, Primary);
 
-        Assert.Equal(new IconRegion(0, 693, 1440, 2560), scope.Resolve(display));
+        // The portrait monitor ends at x = 1440 and the primary starts there.
+        Assert.False(portrait.IntersectsWith(new IconRegion(portrait.Right, portrait.Y, 100, 100)));
+        Assert.True(portrait.IntersectsWith(primary with { X = primary.X - 1 }));
+        Assert.True(primary.IntersectsWith(primary));
     }
 
     private static DisplayFingerprint Display() => new()
