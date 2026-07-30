@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- A dark theme, on by default, with light and "follow Windows" as alternatives. The title
+  bar, list view, tool strips and check boxes are all drawn to match; the shell's own
+  message boxes and file dialogs are not ours to colour and stay as Windows draws them.
+- Locking a layout. A locked layout is skipped by the automatic pruner however old it
+  gets, does not count against the history limit, and refuses to be deleted until it is
+  unlocked.
+
+### Fixed
+
+- The CLI was named `iconssaver.exe` and the tray app `IconsSaver.exe`. Windows treats
+  those as the same file name, so publishing both into one folder left only whichever was
+  written last — which would have shipped every release zip broken. The CLI is now
+  `iconssaver-cli.exe`.
+- The last setting in the settings dialog was hidden behind the buttons. The dialog now
+  measures its content and sizes itself to fit, scrolling only when the screen cannot.
+
 ## [0.1.0] - 2026-07-30
 
 First working version.

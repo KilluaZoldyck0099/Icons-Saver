@@ -17,6 +17,8 @@ sits and puts them all back with one click.
   laptop on its own, one from before you tidied up.
 - **Automatic snapshots.** A rolling history is taken in the background, so there is
   something to go back to even when you forgot to press Save.
+- **Lock the ones you care about.** A locked layout is never pruned by the automatic
+  history and refuses to be deleted, so the good one cannot quietly disappear.
 - **Automatic restore.** When the display arrangement changes, the matching layout is
   put back once the shell has settled.
 - **Display-aware.** Every layout records the monitor arrangement it belongs to, and a
@@ -25,6 +27,7 @@ sits and puts them all back with one click.
   move, which are gone, and which are new — without touching anything.
 - **Global hotkeys.** <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>S</kbd> to save,
   <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>R</kbd> to restore, from anywhere.
+- **Dark by default.** Light and "follow Windows" are a click away in settings.
 - **A real CLI.** Everything the window does, scriptable.
 - **Plain JSON on disk.** Readable, diffable, portable, non-ASCII names intact.
 - **No installer, no service, no admin rights.** A single executable that talks to your
