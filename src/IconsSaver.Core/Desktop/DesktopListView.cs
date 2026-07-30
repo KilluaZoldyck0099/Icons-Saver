@@ -177,6 +177,23 @@ public sealed partial class DesktopListView : IDisposable
         return _memory.ReadUnicode(TextOffset, length);
     }
 
+    /// <summary>
+    /// Whether the desktop is currently showing its icons at all.
+    /// </summary>
+    /// <remarks>
+    /// Turning off "View -> Show desktop icons" hides the list view without emptying it, so the
+    /// item count alone cannot tell an empty desktop apart from a hidden one. That distinction
+    /// matters: saving while the icons are hidden would record a layout that restores nothing.
+    /// </remarks>
+    public bool IconsAreVisible
+    {
+        get
+        {
+            ThrowIfDisposed();
+            return User32.IsWindowVisible(_windows.ListView);
+        }
+    }
+
     /// <summary>Sends a message to the list view and returns its result.</summary>
     private IntPtr Send(int message, IntPtr wParam, IntPtr lParam, string description) =>
         SendTo(_windows.ListView, message, wParam, lParam, description);

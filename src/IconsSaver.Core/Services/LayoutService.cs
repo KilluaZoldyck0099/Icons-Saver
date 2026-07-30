@@ -56,6 +56,13 @@ public sealed class LayoutService
     {
         using DesktopListView view = DesktopListView.Open();
 
+        if (!view.IconsAreVisible)
+        {
+            throw new DesktopInteropException(
+                "The desktop icons are hidden, so there is nothing to capture. Turn " +
+                "'View -> Show desktop icons' back on and try again.");
+        }
+
         IReadOnlyList<DesktopIcon> icons = view.ReadAll();
         DesktopViewOptions viewOptions = view.ReadViewOptions();
         DisplayFingerprint display = DisplayEnumerator.Capture();
