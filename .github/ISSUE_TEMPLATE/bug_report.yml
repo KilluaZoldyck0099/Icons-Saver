@@ -1,0 +1,56 @@
+name: Bug report
+description: Something does not work the way it should
+labels: [bug]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this. The two most useful things you can
+        include are the output of `iconssaver status` and the tail of
+        `%APPDATA%\IconsSaver\logs\iconssaver.log`.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What did you do, and what did the application do instead of what you expected?
+      placeholder: I pressed Restore and only some of the icons moved.
+    validations:
+      required: true
+
+  - type: textarea
+    id: status
+    attributes:
+      label: Output of `iconssaver status`
+      description: This reports the display arrangement and how many icons the shell is showing.
+      render: text
+    validations:
+      required: false
+
+  - type: input
+    id: windows-version
+    attributes:
+      label: Windows version
+      description: Run `winver` if you are not sure.
+      placeholder: Windows 11 Pro 24H2, build 26100
+    validations:
+      required: true
+
+  - type: textarea
+    id: displays
+    attributes:
+      label: Display setup
+      description: How many monitors, at what resolutions and scaling, and how they are arranged.
+      placeholder: Three monitors. 4K at 100% primary, one portrait to the left, one above.
+    validations:
+      required: false
+
+  - type: textarea
+    id: log
+    attributes:
+      label: Relevant log lines
+      description: From `%APPDATA%\IconsSaver\logs\iconssaver.log`.
+      render: text
+    validations:
+      required: false
