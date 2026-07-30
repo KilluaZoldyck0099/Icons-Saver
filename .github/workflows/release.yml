@@ -39,31 +39,53 @@ jobs:
       - name: Test
         run: dotnet test IconsSaver.sln -c Release
 
-      - name: Publish the tray application
-        run: >
-          dotnet publish src/IconsSaver.App/IconsSaver.App.csproj
-          -c Release -r win-x64 --self-contained false
-          -p:Version=${{ steps.version.outputs.value }}
-          -p:PublishSingleFile=true
-          -o publish/app
+      # Two flavours ship. The small one is for people who already have .NET; the standalone one
+      # carries the whole runtime so it runs on a machine with nothing installed, which is what
+      # anyone forwarding the exe to a friend actually needs.
+      - name: Publish framework-dependent
+        shell: pwsh
+        run: |
+          foreach ($project in 'src/IconsSaver.App/IconsSaver.App.csproj', 'src/IconsSaver.Cli/IconsSaver.Cli.csproj') {
+            dotnet publish $project -c Release -r win-x64 `
+              --self-contained false `
+              -p:PublishSingleFile=true `
+              -p:DebugType=none `
+              -p:Version=${{ steps.version.outputs.value }} `
+              -o publish/framework-dependent
+            if ($LASTEXITCODE -ne 0) { throw "publish failed for $project" }
+          }
 
-      - name: Publish the command line tool
-        run: >
-          dotnet publish src/IconsSaver.Cli/IconsSaver.Cli.csproj
-          -c Release -r win-x64 --self-contained false
-          -p:Version=${{ steps.version.outputs.value }}
-          -p:PublishSingleFile=true
-          -o publish/cli
+      - name: Publish standalone
+        shell: pwsh
+        run: |
+          foreach ($project in 'src/IconsSaver.App/IconsSaver.App.csproj', 'src/IconsSaver.Cli/IconsSaver.Cli.csproj') {
+            dotnet publish $project -c Release -r win-x64 `
+              --self-contained true `
+              -p:PublishSingleFile=true `
+              -p:EnableCompressionInSingleFile=true `
+              -p:IncludeNativeLibrariesForSelfExtract=true `
+              -p:DebugType=none `
+              -p:Version=${{ steps.version.outputs.value }} `
+              -o publish/standalone
+            if ($LASTEXITCODE -ne 0) { throw "publish failed for $project" }
+          }
 
       - name: Package
         shell: pwsh
         run: |
+          $version = '${{ steps.version.outputs.value }}'
           New-Item -ItemType Directory -Force dist | Out-Null
-          Copy-Item publish/cli/iconssaver-cli.exe publish/app/ -Force
-          Copy-Item README.md, LICENSE publish/app/ -Force
-          Compress-Archive -Path publish/app/* -DestinationPath "dist/IconsSaver-${{ steps.version.outputs.value }}-win-x64.zip"
 
-      - name: Upload the build artifact
+          foreach ($flavour in 'framework-dependent', 'standalone') {
+            Copy-Item README.md, LICENSE "publish/$flavour/" -Force
+            Compress-Archive -Path "publish/$flavour/*" -DestinationPath "dist/IconsSaver-$version-win-x64-$flavour.zip"
+          }
+
+          Get-ChildItem dist | ForEach-Object {
+            "{0,-52} {1,8:N1} MB" -f $_.Name, ($_.Length / 1MB)
+          }
+
+      - name: Upload the build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: IconsSaver-${{ steps.version.outputs.value }}-win-x64
@@ -75,3 +97,13 @@ jobs:
         with:
           files: dist/*.zip
           generate_release_notes: true
+          body: |
+            ### Which download?
+
+            - **standalone** — one executable, runs on any 64-bit Windows 10 or 11 with nothing
+              installed. Larger, because it carries the .NET runtime inside it.
+            - **framework-dependent** — much smaller, but needs the
+              [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0).
+
+            Both are unsigned, so Windows SmartScreen will ask before running them the first time:
+            **More info → Run anyway**.
