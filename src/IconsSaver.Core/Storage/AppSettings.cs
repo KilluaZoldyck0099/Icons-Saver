@@ -1,3 +1,5 @@
+using IconsSaver.Core.Models;
+
 namespace IconsSaver.Core.Storage;
 
 /// <summary>
@@ -10,6 +12,9 @@ namespace IconsSaver.Core.Storage;
 /// </remarks>
 public sealed class AppSettings
 {
+    /// <summary>Colour scheme for the windows.</summary>
+    public AppTheme Theme { get; set; } = AppTheme.Dark;
+
     /// <summary>Register the app in the per-user <c>Run</c> key.</summary>
     public bool StartWithWindows { get; set; }
 
