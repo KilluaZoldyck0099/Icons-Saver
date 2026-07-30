@@ -39,23 +39,10 @@ jobs:
       - name: Test
         run: dotnet test IconsSaver.sln -c Release
 
-      # Two flavours ship. The small one is for people who already have .NET; the standalone one
-      # carries the whole runtime so it runs on a machine with nothing installed, which is what
-      # anyone forwarding the exe to a friend actually needs.
-      - name: Publish framework-dependent
-        shell: pwsh
-        run: |
-          foreach ($project in 'src/IconsSaver.App/IconsSaver.App.csproj', 'src/IconsSaver.Cli/IconsSaver.Cli.csproj') {
-            dotnet publish $project -c Release -r win-x64 `
-              --self-contained false `
-              -p:PublishSingleFile=true `
-              -p:DebugType=none `
-              -p:Version=${{ steps.version.outputs.value }} `
-              -o publish/framework-dependent
-            if ($LASTEXITCODE -ne 0) { throw "publish failed for $project" }
-          }
-
-      - name: Publish standalone
+      # One build, self-contained. Offering a second, smaller flavour that needs the .NET runtime
+      # installed only buys a download saving for people who already have it, at the cost of making
+      # every other visitor answer a question they have no way to answer.
+      - name: Publish
         shell: pwsh
         run: |
           foreach ($project in 'src/IconsSaver.App/IconsSaver.App.csproj', 'src/IconsSaver.Cli/IconsSaver.Cli.csproj') {
@@ -66,7 +53,7 @@ jobs:
               -p:IncludeNativeLibrariesForSelfExtract=true `
               -p:DebugType=none `
               -p:Version=${{ steps.version.outputs.value }} `
-              -o publish/standalone
+              -o publish
             if ($LASTEXITCODE -ne 0) { throw "publish failed for $project" }
           }
 
@@ -76,10 +63,8 @@ jobs:
           $version = '${{ steps.version.outputs.value }}'
           New-Item -ItemType Directory -Force dist | Out-Null
 
-          foreach ($flavour in 'framework-dependent', 'standalone') {
-            Copy-Item README.md, LICENSE "publish/$flavour/" -Force
-            Compress-Archive -Path "publish/$flavour/*" -DestinationPath "dist/IconsSaver-$version-win-x64-$flavour.zip"
-          }
+          Copy-Item README.md, LICENSE publish/ -Force
+          Compress-Archive -Path publish/* -DestinationPath "dist/IconsSaver-$version-win-x64.zip"
 
           Get-ChildItem dist | ForEach-Object {
             "{0,-52} {1,8:N1} MB" -f $_.Name, ($_.Length / 1MB)
@@ -98,12 +83,8 @@ jobs:
           files: dist/*.zip
           generate_release_notes: true
           body: |
-            ### Which download?
+            Download the zip, unpack it, run `IconsSaver.exe`. Nothing to install: the .NET runtime
+            is inside the executable, so it works on any 64-bit Windows 10 or 11 as it comes.
 
-            - **standalone** — one executable, runs on any 64-bit Windows 10 or 11 with nothing
-              installed. Larger, because it carries the .NET runtime inside it.
-            - **framework-dependent** — much smaller, but needs the
-              [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0).
-
-            Both are unsigned, so Windows SmartScreen will ask before running them the first time:
+            The executables are unsigned, so Windows SmartScreen will ask the first time:
             **More info → Run anyway**.
