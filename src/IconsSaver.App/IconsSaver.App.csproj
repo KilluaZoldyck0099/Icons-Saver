@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <RootNamespace>IconsSaver.App</RootNamespace>
+    <AssemblyName>IconsSaver</AssemblyName>
+    <Description>Tray application for saving and restoring Windows desktop icon layouts.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\IconsSaver.Core\IconsSaver.Core.csproj" />
+  </ItemGroup>
+
+</Project>
