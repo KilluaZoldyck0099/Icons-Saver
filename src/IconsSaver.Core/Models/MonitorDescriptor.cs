@@ -8,8 +8,13 @@ namespace IconsSaver.Core.Models;
 /// The device interface path of the physical monitor. Unlike <paramref name="DeviceName"/> this
 /// stays the same when displays are re-enumerated, so it is what identity is keyed on.
 /// </param>
-/// <param name="Left">Left edge in virtual screen coordinates. Negative for monitors left of the primary.</param>
-/// <param name="Top">Top edge in virtual screen coordinates.</param>
+/// <param name="Left">
+/// Left edge in screen coordinates, whose origin is the top-left of the <em>primary</em> monitor.
+/// Negative for monitors placed to the left of it. Note that this is a different origin from the one
+/// icon positions use, which is the top-left of the whole virtual screen — see
+/// <see cref="IconRegion.ForMonitor"/> for the translation between them.
+/// </param>
+/// <param name="Top">Top edge in screen coordinates. Negative for monitors placed above the primary.</param>
 /// <param name="Width">Width in physical pixels.</param>
 /// <param name="Height">Height in physical pixels.</param>
 /// <param name="IsPrimary">Whether this is the monitor the shell treats as primary.</param>

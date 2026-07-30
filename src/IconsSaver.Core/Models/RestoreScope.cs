@@ -15,7 +15,7 @@ namespace IconsSaver.Core.Models;
 /// <para>
 /// The region is expressed in the coordinate space of the <em>snapshot</em>, which is the space the
 /// preview draws. Selecting on a picture of the saved layout therefore means what it looks like it
-/// means, even when the layout is being forced onto a display setup it was not captured on.
+/// means.
 /// </para>
 /// </remarks>
 public sealed record RestoreScope
@@ -23,25 +23,37 @@ public sealed record RestoreScope
     /// <summary>Restore everything in the layout.</summary>
     public static readonly RestoreScope Everything = new();
 
-    /// <summary>An explicit rectangle, in the snapshot's icon coordinates.</summary>
+    /// <summary>
+    /// The area to restore, in the snapshot's icon coordinates, or <see langword="null"/> for all
+    /// of it.
+    /// </summary>
+    /// <remarks>
+    /// Resolved when the scope is created rather than looked up later. An earlier version stored a
+    /// monitor's device id and resolved it on demand, which failed open in the worst possible way:
+    /// <see cref="MonitorDescriptor.DeviceId"/> is empty whenever Windows declines to report a
+    /// device interface path, an empty id made the scope indistinguishable from "everything", and
+    /// clicking a single screen would then have restored the whole desktop.
+    /// </remarks>
     public IconRegion? Region { get; init; }
 
-    /// <summary>A monitor from the snapshot's display, identified by its stable device id.</summary>
+    /// <summary>Which monitor this scope came from, when it came from one. Never used for lookup.</summary>
     public string? MonitorDeviceId { get; init; }
 
     /// <summary>A short description for the UI and for the restore report.</summary>
     public string? Label { get; init; }
 
     /// <summary>True when nothing is being filtered out.</summary>
-    public bool IsEverything => Region is null && string.IsNullOrEmpty(MonitorDeviceId);
+    public bool IsEverything => Region is null;
 
     /// <summary>Restores only the icons that belong to one monitor of the saved setup.</summary>
-    public static RestoreScope ForMonitor(MonitorDescriptor monitor)
+    public static RestoreScope ForMonitor(DisplayFingerprint display, MonitorDescriptor monitor)
     {
+        ArgumentNullException.ThrowIfNull(display);
         ArgumentNullException.ThrowIfNull(monitor);
 
         return new RestoreScope
         {
+            Region = IconRegion.ForMonitor(display, monitor),
             MonitorDeviceId = monitor.DeviceId,
             Label = monitor.DeviceName,
         };
@@ -54,43 +66,24 @@ public sealed record RestoreScope
         Label = $"selected area ({region})",
     };
 
-    /// <summary>
-    /// Works out the actual rectangle, or <see langword="null"/> when the whole layout is in scope.
-    /// </summary>
+    /// <summary>The area to restore, or <see langword="null"/> when the whole layout is in scope.</summary>
     /// <remarks>
-    /// A monitor id that no longer appears in the snapshot resolves to an empty region rather than
-    /// to "everything": the safe reading of "restore the monitor that is not there" is to move
-    /// nothing, not to move all of it.
+    /// The parameter is kept so callers read naturally and so the signature survives if a future
+    /// scope kind does need the display to resolve itself.
     /// </remarks>
     public IconRegion? Resolve(DisplayFingerprint display)
     {
         ArgumentNullException.ThrowIfNull(display);
-
-        if (Region is IconRegion explicitRegion)
-        {
-            return explicitRegion;
-        }
-
-        if (string.IsNullOrEmpty(MonitorDeviceId))
-        {
-            return null;
-        }
-
-        MonitorDescriptor? monitor = display.Monitors
-            .FirstOrDefault(m => string.Equals(m.DeviceId, MonitorDeviceId, StringComparison.OrdinalIgnoreCase));
-
-        return monitor is null
-            ? new IconRegion(0, 0, 0, 0)
-            : IconRegion.ForMonitor(display, monitor);
+        return Region;
     }
 
     /// <summary>Whether a saved entry should be restored under this scope.</summary>
     public bool Includes(IconEntry entry, DisplayFingerprint display)
     {
         ArgumentNullException.ThrowIfNull(entry);
+        ArgumentNullException.ThrowIfNull(display);
 
-        IconRegion? region = Resolve(display);
-        return region is null || region.Value.Contains(entry.Position);
+        return Region is not IconRegion region || region.Contains(entry.Position);
     }
 
     public override string ToString() => IsEverything ? "the whole desktop" : Label ?? "a selection";
