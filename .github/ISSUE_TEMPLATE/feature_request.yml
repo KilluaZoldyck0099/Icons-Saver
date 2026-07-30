@@ -1,0 +1,28 @@
+name: Feature request
+description: Suggest something Icons Saver should be able to do
+labels: [enhancement]
+
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do?
+      description: Describe the situation rather than the solution. It usually leads somewhere better.
+      placeholder: I switch between a docked and an undocked setup several times a day, and...
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like it to do?
+    validations:
+      required: false
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Anything you have tried instead
+      description: Including other tools, and what was wrong with them.
+    validations:
+      required: false
