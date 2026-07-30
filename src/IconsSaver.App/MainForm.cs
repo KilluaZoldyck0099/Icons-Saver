@@ -195,6 +195,7 @@ internal sealed class MainForm : Form
 
         _list.SelectedIndexChanged += (_, _) => OnSelectionChanged();
         _list.DoubleClick += OnRestore;
+        _preview.SelectionChanged += (_, _) => OnScopeChanged();
         _list.DrawColumnHeader += OnDrawColumnHeader;
         _list.DrawItem += (_, e) => e.DrawDefault = false;
         _list.DrawSubItem += OnDrawSubItem;
@@ -330,7 +331,11 @@ internal sealed class MainForm : Form
         _exportButton.Enabled = item is not null;
 
         _lockButton.Text = item?.Snapshot.IsPinned == true ? "Unlock" : "Lock";
+
+        // Setting the snapshot drops any region selection, since a rectangle picked on one layout
+        // means nothing on another.
         _preview.Snapshot = item?.Snapshot;
+        OnScopeChanged();
 
         if (item is null)
         {
@@ -364,6 +369,26 @@ internal sealed class MainForm : Form
     }
 
     // ------------------------------------------------------------------- actions
+
+    /// <summary>
+    /// Keeps the buttons honest about how much of the desktop the next restore will touch.
+    /// </summary>
+    private void OnScopeChanged()
+    {
+        RestoreScope scope = _preview.Selection;
+
+        if (scope.IsEverything)
+        {
+            _restoreButton.Text = "Restore";
+            _previewButton.Text = "What would change?";
+            return;
+        }
+
+        int count = _preview.SelectedIconCount;
+        _restoreButton.Text = $"Restore {count} {(count == 1 ? "icon" : "icons")}";
+        _previewButton.Text = "What would change here?";
+        _status.Text = $"Restoring only {scope}: {count} of {_preview.Snapshot?.IconCount ?? 0} icons.";
+    }
 
     private void OnSaveNow(object? sender, EventArgs e)
     {
@@ -429,7 +454,7 @@ internal sealed class MainForm : Form
             }
         }
 
-        RestoreReport? report = _workspace.Restore(snapshot, RestoreOptions.Manual);
+        RestoreReport? report = _workspace.Restore(snapshot, RestoreOptions.Manual.Within(_preview.Selection));
         if (report is null)
         {
             return;
@@ -456,7 +481,7 @@ internal sealed class MainForm : Form
             return;
         }
 
-        RestoreReport? report = _workspace.Restore(item.Snapshot, RestoreOptions.Preview);
+        RestoreReport? report = _workspace.Restore(item.Snapshot, RestoreOptions.Preview.Within(_preview.Selection));
         if (report is null)
         {
             return;
@@ -471,6 +496,11 @@ internal sealed class MainForm : Form
             $"Would move         : {report.Matched - report.AlreadyInPlace}",
             $"Already in place   : {report.AlreadyInPlace}",
         };
+
+        if (report.OutOfScope > 0)
+        {
+            text.Add($"Outside the area   : {report.OutOfScope}");
+        }
 
         if (report.Missing.Count > 0)
         {
