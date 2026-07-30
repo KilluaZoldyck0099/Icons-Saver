@@ -19,8 +19,17 @@ public sealed record RestoreReport
     /// <summary>How the restore ended.</summary>
     public RestoreOutcome Outcome { get; init; } = RestoreOutcome.Completed;
 
-    /// <summary>Snapshot entries that were paired with a live icon.</summary>
+    /// <summary>Snapshot entries that were paired with a live icon and fell inside the scope.</summary>
     public required int Matched { get; init; }
+
+    /// <summary>
+    /// Entries that were paired with a live icon but sit outside the part of the desktop being
+    /// restored, and so were deliberately left alone.
+    /// </summary>
+    public int OutOfScope { get; init; }
+
+    /// <summary>What the restore was narrowed to, or <see langword="null"/> for the whole desktop.</summary>
+    public string? ScopeDescription { get; init; }
 
     /// <summary>Icons the shell actually accepted a new position for.</summary>
     public required int Moved { get; init; }
@@ -49,7 +58,14 @@ public sealed record RestoreReport
     /// <summary>A one-line summary for the tray balloon or the CLI.</summary>
     public string Summarize()
     {
-        string summary = $"Moved {Moved} of {Matched} matched icons";
+        string summary = ScopeDescription is null
+            ? $"Moved {Moved} of {Matched} matched icons"
+            : $"Moved {Moved} of {Matched} icons in {ScopeDescription}";
+
+        if (OutOfScope > 0)
+        {
+            summary += $", left {OutOfScope} elsewhere alone";
+        }
 
         if (AlreadyInPlace > 0)
         {

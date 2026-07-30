@@ -28,6 +28,16 @@ public sealed record RestoreOptions
     /// <summary>Work out what would happen without moving anything.</summary>
     public bool DryRun { get; init; }
 
+    /// <summary>Which part of the layout to apply. Defaults to all of it.</summary>
+    public RestoreScope Scope { get; init; } = RestoreScope.Everything;
+
+    /// <summary>Returns a copy of these options narrowed to part of the desktop.</summary>
+    public RestoreOptions Within(RestoreScope scope)
+    {
+        ArgumentNullException.ThrowIfNull(scope);
+        return this with { Scope = scope };
+    }
+
     /// <summary>Defaults for a restore the user asked for.</summary>
     public static RestoreOptions Manual { get; } = new();
 

@@ -115,13 +115,23 @@ public sealed class LayoutService
 
         IconMatchResult match = IconMatcher.Match(snapshot.Icons, live);
 
+        // Narrowing happens on the SAVED position, not the current one. When a monitor is
+        // unplugged the shell packs its icons onto whatever screen is left, so the icons that
+        // belong to the missing area are precisely the ones that are no longer anywhere near it.
+        IconRegion? region = options.Scope.Resolve(snapshot.Display);
+        List<IconMatch> inScope = region is null
+            ? match.Matches.ToList()
+            : match.Matches.Where(m => region.Value.Contains(m.Entry.Position)).ToList();
+
+        int outOfScope = match.Matches.Count - inScope.Count;
+
         int moved = 0;
         int alreadyInPlace = 0;
         bool autoArrangeSuspended = false;
 
         if (options.DryRun)
         {
-            alreadyInPlace = match.Matches.Count(m => m.IsAlreadyInPlace);
+            alreadyInPlace = inScope.Count(m => m.IsAlreadyInPlace);
         }
         else
         {
@@ -129,7 +139,7 @@ public sealed class LayoutService
 
             using (view.SuspendAutoArrange(options.ReenableAutoArrange))
             {
-                foreach (IconMatch candidate in match.Matches)
+                foreach (IconMatch candidate in inScope)
                 {
                     if (candidate.IsAlreadyInPlace)
                     {
@@ -151,7 +161,9 @@ public sealed class LayoutService
         {
             DesktopIconCount = live.Count,
             SnapshotIconCount = snapshot.IconCount,
-            Matched = match.Matches.Count,
+            Matched = inScope.Count,
+            OutOfScope = outOfScope,
+            ScopeDescription = options.Scope.IsEverything ? null : options.Scope.ToString(),
             Moved = moved,
             AlreadyInPlace = alreadyInPlace,
             Missing = match.Missing.Select(e => e.Name).ToList(),
@@ -159,7 +171,7 @@ public sealed class LayoutService
             DisplayMismatch = displayMismatch,
             AutoArrangeSuspended = autoArrangeSuspended,
             Duration = stopwatch.Elapsed,
-            Outcome = DetermineOutcome(options, match, moved),
+            Outcome = DetermineOutcome(options, inScope.Count, match.Missing.Count, moved),
         };
 
         AppLog.Info($"Restored '{snapshot.DisplayName}': {report.Summarize()}");
@@ -194,19 +206,21 @@ public sealed class LayoutService
             ?? pool.FirstOrDefault(s => current.MatchesGeometry(s.Display));
     }
 
-    private static RestoreOutcome DetermineOutcome(RestoreOptions options, IconMatchResult match, int moved)
+    private static RestoreOutcome DetermineOutcome(RestoreOptions options, int matched, int missing, int moved)
     {
         if (options.DryRun)
         {
             return RestoreOutcome.Previewed;
         }
 
-        if (match.Matches.Count == 0)
+        if (matched == 0)
         {
             return RestoreOutcome.NothingToDo;
         }
 
-        if (match.Missing.Count > 0)
+        // Missing entries are counted against the whole snapshot, not just the scope, so a narrowed
+        // restore is not reported as having gaps merely because something elsewhere was deleted.
+        if (missing > 0 && options.Scope.IsEverything)
         {
             return RestoreOutcome.CompletedWithGaps;
         }
