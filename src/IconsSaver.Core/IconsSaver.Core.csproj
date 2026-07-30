@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <RootNamespace>IconsSaver.Core</RootNamespace>
+    <AssemblyName>IconsSaver.Core</AssemblyName>
+    <Description>Core engine for reading and writing Windows desktop icon positions.</Description>
+  </PropertyGroup>
+
+</Project>
