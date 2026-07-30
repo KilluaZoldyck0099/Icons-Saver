@@ -152,10 +152,47 @@ internal sealed class MainForm : Form
         {
             _split.SplitterDistance = Math.Clamp(_split.Width - DetailsPanelWidth, lowest, highest);
         }
+
+        FitColumns();
+    }
+
+    /// <summary>
+    /// Stretches the name column so the columns always fill the list exactly.
+    /// </summary>
+    /// <remarks>
+    /// Not cosmetic. Any width left over after the last column is header area that the list view
+    /// paints itself, and it paints it in the system colour — which on a dark window is a bright
+    /// white strip that no owner-draw handler is ever asked about. Leaving no spare width is the
+    /// simplest way to make it impossible.
+    /// </remarks>
+    private void FitColumns()
+    {
+        if (_list.Columns.Count == 0)
+        {
+            return;
+        }
+
+        int others = 0;
+        for (int index = 1; index < _list.Columns.Count; index++)
+        {
+            others += _list.Columns[index].Width;
+        }
+
+        // ClientSize already excludes the vertical scroll bar when one is showing.
+        _list.Columns[0].Width = Math.Max(120, _list.ClientSize.Width - others);
     }
 
     private void WireEvents()
     {
+        _list.Resize += (_, _) => FitColumns();
+        _list.ColumnWidthChanged += (_, e) =>
+        {
+            if (e.ColumnIndex != 0)
+            {
+                FitColumns();
+            }
+        };
+
         _list.SelectedIndexChanged += (_, _) => OnSelectionChanged();
         _list.DoubleClick += OnRestore;
         _list.DrawColumnHeader += OnDrawColumnHeader;
