@@ -5,7 +5,15 @@
     <TargetFramework>net8.0-windows</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <ApplicationIcon>Resources\app.ico</ApplicationIcon>
+    <!--
+      DPI awareness is declared in app.manifest instead of here. The manifest takes effect before
+      any managed code runs, which matters: the icon coordinates read out of explorer are raw
+      pixels, and a window that started life DPI-virtualised would disagree with them.
+    -->
+    <ApplicationHighDpiMode></ApplicationHighDpiMode>
+    <!-- WFAC010 asks for the manifest DPI entries to move into project properties; see above. -->
+    <NoWarn>$(NoWarn);WFAC010</NoWarn>
     <RootNamespace>IconsSaver.App</RootNamespace>
     <AssemblyName>IconsSaver</AssemblyName>
     <Description>Tray application for saving and restoring Windows desktop icon layouts.</Description>
@@ -13,6 +21,11 @@
 
   <ItemGroup>
     <ProjectReference Include="..\IconsSaver.Core\IconsSaver.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Embedded as well as set as the exe icon, so the tray can load a real 16px variant. -->
+    <EmbeddedResource Include="Resources\app.ico" LogicalName="IconsSaver.App.app.ico" />
   </ItemGroup>
 
 </Project>
