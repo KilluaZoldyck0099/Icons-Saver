@@ -59,6 +59,8 @@ internal sealed class InputDialog : Form
             _input.Focus();
             _input.SelectAll();
         };
+
+        Theme.Apply(this);
     }
 
     /// <summary>

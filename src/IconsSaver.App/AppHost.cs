@@ -30,6 +30,9 @@ internal sealed class AppHost : ApplicationContext
 
     public AppHost(bool startHidden)
     {
+        // Resolved before any window is built, so nothing is ever shown in the wrong palette.
+        Theme.Use(_workspace.Settings.Theme);
+
         _hotkeys = new HotkeyManager(_messages.Handle);
         _autoSave = new AutoSaveService(_workspace.Layouts, _workspace.AutoSnapshots);
         _tray = new TrayController(_workspace);
@@ -193,6 +196,10 @@ internal sealed class AppHost : ApplicationContext
 
         _workspace.ApplySettings(dialog.Result);
         ApplySettings(dialog.Result);
+
+        Theme.Use(dialog.Result.Theme);
+        _mainForm?.RefreshTheme();
+
         _workspace.Report("Settings saved.");
     }
 

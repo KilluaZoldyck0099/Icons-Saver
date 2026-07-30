@@ -22,7 +22,10 @@ internal sealed class DesktopPreview : Control
     public DesktopPreview()
     {
         SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.UserPaint | ControlStyles.ResizeRedraw, true);
-        BackColor = Color.FromArgb(255, 18, 21, 27);
+
+        // The preview stays dark in both themes: it is a picture of a screen, and a white one
+        // would read as a blank page rather than as a desktop.
+        BackColor = Theme.PreviewBackground;
         MinimumSize = new Size(120, 80);
     }
 

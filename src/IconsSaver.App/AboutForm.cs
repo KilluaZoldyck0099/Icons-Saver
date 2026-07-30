@@ -75,6 +75,8 @@ internal sealed class AboutForm : Form
         Controls.AddRange(new Control[] { title, blurb, project, dataFolder, license, close });
         AcceptButton = close;
         CancelButton = close;
+
+        Theme.Apply(this);
     }
 
     private static void OpenUrl(string target)
