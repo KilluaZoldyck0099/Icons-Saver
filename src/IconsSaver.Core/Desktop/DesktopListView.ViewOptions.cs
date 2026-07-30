@@ -38,15 +38,19 @@ public sealed partial class DesktopListView
         ApplyToggle(NativeConstants.SFVIDM_ARRANGE_GRID, ReadViewOptions().SnapToGrid, enabled, "the align to grid toggle");
 
     /// <summary>
-    /// Turns auto arrange off for the lifetime of the returned scope, then puts it back the way the
-    /// user had it.
+    /// Turns auto arrange off for the lifetime of the returned scope.
     /// </summary>
+    /// <param name="restoreWhenDone">
+    /// Whether to switch auto arrange back on afterwards. A restore must pass
+    /// <see langword="false"/>: switching it back on repacks every icon immediately, which would
+    /// undo the layout that was just applied. Read-only work can pass <see langword="true"/> and
+    /// leave the user's preference untouched.
+    /// </param>
     /// <remarks>
-    /// Restoring a layout while auto arrange is on does nothing at all, so every restore runs inside
-    /// one of these. The user's own preference is preserved: if they like auto arrange, it is on
-    /// again by the time the scope is disposed.
+    /// Writing a position while auto arrange is on does nothing at all, so every restore runs inside
+    /// one of these.
     /// </remarks>
-    public IDisposable SuspendAutoArrange()
+    public IDisposable SuspendAutoArrange(bool restoreWhenDone = true)
     {
         ThrowIfDisposed();
 
@@ -56,7 +60,7 @@ public sealed partial class DesktopListView
             SetAutoArrange(false);
         }
 
-        return new AutoArrangeScope(this, wasEnabled);
+        return new AutoArrangeScope(this, wasEnabled && restoreWhenDone);
     }
 
     /// <summary>
