@@ -181,7 +181,7 @@ internal static class Program
                 return false;
             }
 
-            scope = RestoreScope.ForMonitor(snapshot.Display.Monitors[index - 1]);
+            scope = RestoreScope.ForMonitor(snapshot.Display, snapshot.Display.Monitors[index - 1]);
             return true;
         }
 

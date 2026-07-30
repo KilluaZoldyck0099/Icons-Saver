@@ -166,22 +166,35 @@ internal sealed class DesktopPreview : Control
         }
     }
 
-    /// <summary>Turns a drag into a scope, ignoring anything too small to have been deliberate.</summary>
+    /// <summary>
+    /// Turns a drag into a scope, keeping the current one if the drag described nothing.
+    /// </summary>
+    /// <remarks>
+    /// Falling back to the whole desktop would be the wrong way to fail. A stray gesture would then
+    /// silently widen what the next Restore touches, and the button that said "Restore 14 icons" a
+    /// moment ago would quietly start meaning all two hundred.
+    /// </remarks>
     private RestoreScope RegionFromDrag(Point anchor, Point release)
     {
         IconPosition from = ToIconSpace(anchor);
         IconPosition to = ToIconSpace(release);
 
         IconRegion region = IconRegion.FromCorners(from.X, from.Y, to.X, to.Y);
-        return region.IsEmpty ? RestoreScope.Everything : RestoreScope.ForRegion(region);
+        return region.IsEmpty ? _selection : RestoreScope.ForRegion(region);
     }
 
-    /// <summary>The monitor under a point, or the whole desktop when the point is on the backdrop.</summary>
+    /// <summary>
+    /// The monitor under a point, or the current selection when the point is on the backdrop.
+    /// </summary>
+    /// <remarks>
+    /// The backdrop is a real target: an L-shaped arrangement leaves a sizeable dead corner inside
+    /// the drawn area. Clicking it must not widen the scope, for the same reason as above.
+    /// </remarks>
     private RestoreScope MonitorUnder(Point point)
     {
         if (_snapshot is null)
         {
-            return RestoreScope.Everything;
+            return _selection;
         }
 
         IconPosition position = ToIconSpace(point);
@@ -190,11 +203,11 @@ internal sealed class DesktopPreview : Control
         {
             if (IconRegion.ForMonitor(_snapshot.Display, monitor).Contains(position))
             {
-                return RestoreScope.ForMonitor(monitor);
+                return RestoreScope.ForMonitor(_snapshot.Display, monitor);
             }
         }
 
-        return RestoreScope.Everything;
+        return _selection;
     }
 
     /// <summary>Maps a point on this control back into the snapshot''s icon coordinates.</summary>
