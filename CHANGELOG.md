@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Partial restore. Click a screen in the preview or drag a rectangle over it and only those
+  icons are put back; the CLI takes `--monitor <n>` and `--region <x,y,w,h>`. An icon is in
+  scope when its *saved* position falls inside the area, not its current one — which is the
+  rule that actually helps, because unplugging a monitor makes Windows pile its icons onto
+  whatever screen is left, nowhere near where they belong.
+
 - A dark theme, on by default, with light and "follow Windows" as alternatives. The title
   bar, list view, tool strips and check boxes are all drawn to match; the shell's own
   message boxes and file dialogs are not ours to colour and stay as Windows draws them.

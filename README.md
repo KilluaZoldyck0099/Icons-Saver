@@ -23,6 +23,8 @@ sits and puts them all back with one click.
   put back once the shell has settled.
 - **Display-aware.** Every layout records the monitor arrangement it belongs to, and a
   layout is never applied to a setup where its coordinates would make no sense.
+- **Restore only part of it.** Click a screen in the preview, or drag a box around a group
+  of icons, and only those move. The screen that still looks right is left alone.
 - **Preview before you commit.** "What would change?" reports exactly which icons would
   move, which are gone, and which are new — without touching anything.
 - **Global hotkeys.** <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>S</kbd> to save,
@@ -93,10 +95,22 @@ iconssaver-cli <command> [options]
   --name, -n <text>      Name to save the layout under
   --force, -f            Restore even onto a different display setup
   --dry-run              Report what a restore would do, without moving anything
+  --monitor, -m <n>      Restore only the icons belonging to one screen
+  --region <x,y,w,h>     Restore only the icons saved inside a rectangle
 ```
 
 Layout ids can be abbreviated to any unambiguous prefix, so `iconssaver-cli restore 63e2`
 works.
+
+`show` lists the screens with the numbers `--monitor` takes, and how many icons each one
+holds:
+
+```
+Monitors (the number is what --monitor takes):
+  1  \\.\DISPLAY1 3840x2160 at 0,0 (100%) primary  -  112 icons  -  region 3840x2160 at 1440,1080
+  2  \\.\DISPLAY3 1440x2560 at -1440,-387 (100%)   -  106 icons  -  region 1440x2560 at 0,693
+  3  \\.\DISPLAY2 1920x1080 at 182,-1080 (100%)    -    0 icons  -  region 1920x1080 at 1622,0
+```
 
 Taking a snapshot before something risky is a one-liner worth putting in a script:
 
