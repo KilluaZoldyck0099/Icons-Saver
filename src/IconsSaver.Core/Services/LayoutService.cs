@@ -94,6 +94,27 @@ public sealed class LayoutService
         DisplayFingerprint current = DisplayEnumerator.Capture();
         bool displayMismatch = !current.Matches(snapshot.Display);
 
+        IconRegion? region = options.Scope.Resolve(snapshot.Display);
+
+        if (region is IconRegion scoped && Unreachable(scoped, snapshot, current) is string reason)
+        {
+            AppLog.Warn($"Refused to restore {options.Scope} of '{snapshot.DisplayName}': {reason}");
+
+            return new RestoreReport
+            {
+                DesktopIconCount = live.Count,
+                SnapshotIconCount = snapshot.IconCount,
+                Matched = 0,
+                Moved = 0,
+                AlreadyInPlace = 0,
+                Outcome = RestoreOutcome.SkippedScopeUnavailable,
+                ScopeDescription = options.Scope.ToString(),
+                RefusedBecause = reason,
+                DisplayMismatch = displayMismatch,
+                Duration = stopwatch.Elapsed,
+            };
+        }
+
         if (displayMismatch && options.RequireMatchingDisplay)
         {
             AppLog.Warn(
@@ -118,7 +139,6 @@ public sealed class LayoutService
         // Narrowing happens on the SAVED position, not the current one. When a monitor is
         // unplugged the shell packs its icons onto whatever screen is left, so the icons that
         // belong to the missing area are precisely the ones that are no longer anywhere near it.
-        IconRegion? region = options.Scope.Resolve(snapshot.Display);
         List<IconMatch> inScope = region is null
             ? match.Matches.ToList()
             : match.Matches.Where(m => region.Value.Contains(m.Entry.Position)).ToList();
@@ -135,9 +155,12 @@ public sealed class LayoutService
         }
         else
         {
-            autoArrangeSuspended = view.ReadViewOptions().AutoArrange && !options.ReenableAutoArrange;
+            // Switching auto arrange back on repacks the WHOLE desktop, which would undo every
+            // region the user did not ask to touch. A narrowed restore can never do that.
+            bool reenableAutoArrange = options.ReenableAutoArrange && options.Scope.IsEverything;
+            autoArrangeSuspended = view.ReadViewOptions().AutoArrange && !reenableAutoArrange;
 
-            using (view.SuspendAutoArrange(options.ReenableAutoArrange))
+            using (view.SuspendAutoArrange(reenableAutoArrange))
             {
                 foreach (IconMatch candidate in inScope)
                 {
@@ -166,8 +189,16 @@ public sealed class LayoutService
             ScopeDescription = options.Scope.IsEverything ? null : options.Scope.ToString(),
             Moved = moved,
             AlreadyInPlace = alreadyInPlace,
-            Missing = match.Missing.Select(e => e.Name).ToList(),
-            Unknown = match.Unknown.Select(i => i.Name).ToList(),
+            // Reported within the scope only. Telling someone restoring their left-hand screen
+            // about a file that vanished from the right-hand one is noise dressed as a warning.
+            Missing = (region is IconRegion m
+                    ? match.Missing.Where(e => m.Contains(e.Position))
+                    : match.Missing)
+                .Select(e => e.Name).ToList(),
+            Unknown = (region is IconRegion u
+                    ? match.Unknown.Where(i => u.Contains(i.Position))
+                    : match.Unknown)
+                .Select(i => i.Name).ToList(),
             DisplayMismatch = displayMismatch,
             AutoArrangeSuspended = autoArrangeSuspended,
             Duration = stopwatch.Elapsed,
@@ -204,6 +235,43 @@ public sealed class LayoutService
 
         return pool.FirstOrDefault(s => current.Matches(s.Display))
             ?? pool.FirstOrDefault(s => current.MatchesGeometry(s.Display));
+    }
+
+    /// <summary>
+    /// Whether a narrowed restore would write coordinates that cannot land where they are meant to,
+    /// and why.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The coordinate handed to the shell is interpreted against the <em>live</em> virtual screen
+    /// origin, while the scope was chosen against the snapshot's. When the two origins agree the
+    /// spaces are identical and everything is exact; when they do not, the same numbers describe a
+    /// different place, and a restore aimed at one screen could scatter icons across another.
+    /// </para>
+    /// <para>
+    /// Refusing rather than approximating is deliberate. A whole-desktop restore at least moves
+    /// every icon consistently and can be undone by restoring another layout, but a narrowed one
+    /// that silently misses would leave the desktop in a state the user never asked for and cannot
+    /// name. The wider restore is still available, which is the point: the dangerous action stays
+    /// the explicit one.
+    /// </para>
+    /// </remarks>
+    private static string? Unreachable(IconRegion region, LayoutSnapshot snapshot, DisplayFingerprint current)
+    {
+        if (snapshot.Display.VirtualLeft != current.VirtualLeft ||
+            snapshot.Display.VirtualTop != current.VirtualTop)
+        {
+            return "the desktop origin has moved since this layout was saved, so part of it can no " +
+                   "longer be restored on its own. Restoring the whole layout still works.";
+        }
+
+        bool reachable = current.Monitors
+            .Select(monitor => IconRegion.ForMonitor(snapshot.Display, monitor))
+            .Any(area => area.IntersectsWith(region));
+
+        return reachable
+            ? null
+            : "that part of the desktop is not attached right now, so its icons would have nowhere to go.";
     }
 
     private static RestoreOutcome DetermineOutcome(RestoreOptions options, int matched, int missing, int moved)

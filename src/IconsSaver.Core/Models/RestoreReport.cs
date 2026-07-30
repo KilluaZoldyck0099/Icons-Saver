@@ -52,12 +52,29 @@ public sealed record RestoreReport
     /// <summary>How long the restore took.</summary>
     public TimeSpan Duration { get; init; }
 
-    /// <summary>True when every entry that could be matched was placed.</summary>
-    public bool IsComplete => Missing.Count == 0 && Matched == SnapshotIconCount;
+    /// <summary>Set when the restore was refused, explaining why.</summary>
+    public string? RefusedBecause { get; init; }
+
+    /// <summary>
+    /// True when every entry that could have been placed was placed.
+    /// </summary>
+    /// <remarks>
+    /// Measured against the part of the layout that was actually in play. A restore narrowed to one
+    /// screen is complete when that screen is right, not when the other screens are.
+    /// </remarks>
+    public bool IsComplete =>
+        Missing.Count == 0 &&
+        Outcome is RestoreOutcome.Completed or RestoreOutcome.NothingToDo &&
+        (ScopeDescription is not null || Matched == SnapshotIconCount);
 
     /// <summary>A one-line summary for the tray balloon or the CLI.</summary>
     public string Summarize()
     {
+        if (RefusedBecause is not null)
+        {
+            return RefusedBecause;
+        }
+
         string summary = ScopeDescription is null
             ? $"Moved {Moved} of {Matched} matched icons"
             : $"Moved {Moved} of {Matched} icons in {ScopeDescription}";

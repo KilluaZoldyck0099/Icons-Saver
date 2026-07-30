@@ -38,6 +38,11 @@ public readonly record struct IconRegion(int X, int Y, int Width, int Height)
         position.X >= X && position.X < Right &&
         position.Y >= Y && position.Y < Bottom;
 
+    /// <summary>Whether this region and <paramref name="other"/> share any area at all.</summary>
+    public bool IntersectsWith(IconRegion other) =>
+        X < other.Right && Right > other.X &&
+        Y < other.Bottom && Bottom > other.Y;
+
     /// <summary>Builds a region from two opposite corners, in any order.</summary>
     public static IconRegion FromCorners(int x1, int y1, int x2, int y2) => new(
         Math.Min(x1, x2),
