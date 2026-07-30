@@ -19,6 +19,9 @@ public static class AppInfo
     /// <summary>Project home, shown in the about box.</summary>
     public const string ProjectUrl = "https://github.com/KilluaZoldyck0099/Icons-Saver";
 
+    /// <summary>Copyright line, shown in the about box.</summary>
+    public const string Copyright = "Copyright (c) 2026 KilluaZoldyck";
+
     /// <summary>The running assembly version, formatted as <c>major.minor.patch</c>.</summary>
     public static string Version =>
         typeof(AppInfo).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
