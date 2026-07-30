@@ -1,0 +1,77 @@
+name: release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to build, without the leading v
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Work out the version
+        id: version
+        shell: pwsh
+        run: |
+          $version = if ($env:GITHUB_REF -like 'refs/tags/v*') {
+            $env:GITHUB_REF -replace '^refs/tags/v', ''
+          } else {
+            '${{ github.event.inputs.version }}'
+          }
+          "value=$version" >> $env:GITHUB_OUTPUT
+          Write-Host "Building $version"
+
+      - name: Test
+        run: dotnet test IconsSaver.sln -c Release
+
+      - name: Publish the tray application
+        run: >
+          dotnet publish src/IconsSaver.App/IconsSaver.App.csproj
+          -c Release -r win-x64 --self-contained false
+          -p:Version=${{ steps.version.outputs.value }}
+          -p:PublishSingleFile=true
+          -o publish/app
+
+      - name: Publish the command line tool
+        run: >
+          dotnet publish src/IconsSaver.Cli/IconsSaver.Cli.csproj
+          -c Release -r win-x64 --self-contained false
+          -p:Version=${{ steps.version.outputs.value }}
+          -p:PublishSingleFile=true
+          -o publish/cli
+
+      - name: Package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Copy-Item publish/cli/iconssaver.exe publish/app/ -Force
+          Copy-Item README.md, LICENSE publish/app/ -Force
+          Compress-Archive -Path publish/app/* -DestinationPath "dist/IconsSaver-${{ steps.version.outputs.value }}-win-x64.zip"
+
+      - name: Upload the build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: IconsSaver-${{ steps.version.outputs.value }}-win-x64
+          path: dist/*.zip
+
+      - name: Create the GitHub release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.zip
+          generate_release_notes: true
