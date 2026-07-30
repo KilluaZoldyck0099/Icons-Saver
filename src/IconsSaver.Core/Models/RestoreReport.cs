@@ -16,6 +16,9 @@ public sealed record RestoreReport
     /// <summary>Entries the snapshot contained.</summary>
     public required int SnapshotIconCount { get; init; }
 
+    /// <summary>How the restore ended.</summary>
+    public RestoreOutcome Outcome { get; init; } = RestoreOutcome.Completed;
+
     /// <summary>Snapshot entries that were paired with a live icon.</summary>
     public required int Matched { get; init; }
 
