@@ -45,14 +45,27 @@ dotnet build IconsSaver.sln -c Release
 
 The tray application ends up at
 `src/IconsSaver.App/bin/Release/net8.0-windows/IconsSaver.exe` and the command line tool
-at `src/IconsSaver.Cli/bin/Release/net8.0-windows/iconssaver.exe`.
+at `src/IconsSaver.Cli/bin/Release/net8.0-windows/iconssaver-cli.exe`.
 
 Run the app, press **Save now**, and you have a layout to come back to.
+
+### A portable build
+
+Those are build outputs and need the files around them. For two self-contained
+executables you can drop anywhere:
+
+```powershell
+dotnet publish src/IconsSaver.App/IconsSaver.App.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o publish
+dotnet publish src/IconsSaver.Cli/IconsSaver.Cli.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o publish
+```
+
+That leaves `publish\IconsSaver.exe` and `publish\iconssaver-cli.exe`, each a single file
+that only needs the .NET 8 Desktop Runtime installed.
 
 ## Command line
 
 ```
-iconssaver <command> [options]
+iconssaver-cli <command> [options]
 
   save [name]            Capture the current icon layout
   list                   List saved layouts
@@ -69,13 +82,13 @@ iconssaver <command> [options]
   --dry-run              Report what a restore would do, without moving anything
 ```
 
-Layout ids can be abbreviated to any unambiguous prefix, so `iconssaver restore 63e2`
+Layout ids can be abbreviated to any unambiguous prefix, so `iconssaver-cli restore 63e2`
 works.
 
 Taking a snapshot before something risky is a one-liner worth putting in a script:
 
 ```powershell
-iconssaver save "before the driver update"
+iconssaver-cli save "before the driver update"
 ```
 
 ## Where things are kept
