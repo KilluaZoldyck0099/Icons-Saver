@@ -13,6 +13,16 @@ internal static class Program
     [STAThread]
     private static void Main(string[] arguments)
     {
+        try
+        {
+            EnvironmentGuard.EnsureSupportedProcess();
+        }
+        catch (PlatformNotSupportedException exception)
+        {
+            MessageBox.Show(exception.Message, AppInfo.Name, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return;
+        }
+
         using var instance = new SingleInstance($"{AppInfo.FolderName}.SingleInstance");
 
         if (!instance.IsFirstInstance)

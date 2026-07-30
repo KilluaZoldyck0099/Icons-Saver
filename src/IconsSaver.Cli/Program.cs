@@ -20,6 +20,17 @@ internal static class Program
     private static int Main(string[] rawArguments)
     {
         Console.OutputEncoding = System.Text.Encoding.UTF8;
+
+        try
+        {
+            EnvironmentGuard.EnsureSupportedProcess();
+        }
+        catch (PlatformNotSupportedException exception)
+        {
+            ConsoleOutput.Error(exception.Message);
+            return ExitUsage;
+        }
+
         AppPaths.EnsureCreated();
 
         CommandLineArgs arguments = CommandLineArgs.Parse(rawArguments);
