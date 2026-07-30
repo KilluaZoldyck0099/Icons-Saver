@@ -1,3 +1,4 @@
+using IconsSaver.Core.Models;
 using IconsSaver.Core.Native;
 
 namespace IconsSaver.Core.Desktop;
@@ -17,7 +18,7 @@ namespace IconsSaver.Core.Desktop;
 /// than one that reports a failure.
 /// </para>
 /// </remarks>
-public sealed class DesktopListView : IDisposable
+public sealed partial class DesktopListView : IDisposable
 {
     /// <summary>How long to wait for explorer to answer a single message.</summary>
     private const uint MessageTimeoutMs = 5_000;
@@ -27,6 +28,7 @@ public sealed class DesktopListView : IDisposable
     private const int TextOffset = 256;
     private const int TextCapacityChars = 512;
     private const int PointOffset = TextOffset + (TextCapacityChars * 2);
+    private const int PointSize = 8;
     private const int ScratchSize = 8 * 1024;
 
     private readonly DesktopWindows _windows;
@@ -80,6 +82,99 @@ public sealed class DesktopListView : IDisposable
             ThrowIfDisposed();
             return (int)Send(NativeConstants.LVM_GETITEMCOUNT, IntPtr.Zero, IntPtr.Zero, "a request for the icon count");
         }
+    }
+
+    /// <summary>Reads every icon on the desktop, in list view order.</summary>
+    public IReadOnlyList<DesktopIcon> ReadAll()
+    {
+        ThrowIfDisposed();
+
+        int count = Count;
+        if (count <= 0)
+        {
+            return Array.Empty<DesktopIcon>();
+        }
+
+        var icons = new List<DesktopIcon>(count);
+        for (int index = 0; index < count; index++)
+        {
+            icons.Add(ReadAt(index));
+        }
+
+        return icons;
+    }
+
+    /// <summary>Reads a single icon by its current list view index.</summary>
+    public DesktopIcon ReadAt(int index)
+    {
+        ThrowIfDisposed();
+        ArgumentOutOfRangeException.ThrowIfNegative(index);
+
+        IconPosition position = ReadPosition(index);
+        string name = ReadName(index);
+        return new DesktopIcon(index, name, position);
+    }
+
+    /// <summary>Reads where a single item currently sits.</summary>
+    /// <remarks>
+    /// <c>LVM_GETITEMPOSITION</c> writes a <c>POINT</c> through the pointer it is given, so the
+    /// scratch page is cleared, handed over by remote address, and read back afterwards.
+    /// </remarks>
+    public IconPosition ReadPosition(int index)
+    {
+        ThrowIfDisposed();
+
+        _memory.ClearLocal(PointOffset, PointSize);
+        _memory.Push(PointOffset, PointSize);
+
+        IntPtr ok = Send(
+            NativeConstants.LVM_GETITEMPOSITION,
+            index,
+            _memory.Remote(PointOffset),
+            $"a position request for item {index}");
+
+        if (ok == IntPtr.Zero)
+        {
+            return IconPosition.Origin;
+        }
+
+        _memory.Pull(PointOffset, PointSize);
+        return new IconPosition(_memory.ReadInt32(PointOffset), _memory.ReadInt32(PointOffset + 4));
+    }
+
+    /// <summary>Reads the display name shown under a single item.</summary>
+    /// <remarks>
+    /// <c>LVM_GETITEMTEXTW</c> needs an <c>LVITEMW</c> whose <c>pszText</c> points at a caller
+    /// supplied buffer. Both live in the scratch page, so the structure is assembled by hand at the
+    /// documented x64 offsets and its <c>pszText</c> is set to the <em>remote</em> address of the
+    /// text area.
+    /// </remarks>
+    public string ReadName(int index)
+    {
+        ThrowIfDisposed();
+
+        _memory.ClearLocal(ItemOffset, LvItemLayout.Size);
+        _memory.WriteInt32(ItemOffset + LvItemLayout.Mask, NativeConstants.LVIF_TEXT);
+        _memory.WriteInt32(ItemOffset + LvItemLayout.IItem, index);
+        _memory.WriteInt32(ItemOffset + LvItemLayout.ISubItem, 0);
+        _memory.WritePointer(ItemOffset + LvItemLayout.PszText, _memory.Remote(TextOffset));
+        _memory.WriteInt32(ItemOffset + LvItemLayout.CchTextMax, TextCapacityChars);
+        _memory.Push(ItemOffset, LvItemLayout.Size);
+
+        int length = (int)Send(
+            NativeConstants.LVM_GETITEMTEXTW,
+            index,
+            _memory.Remote(ItemOffset),
+            $"a name request for item {index}");
+
+        if (length <= 0)
+        {
+            return string.Empty;
+        }
+
+        length = Math.Min(length, TextCapacityChars - 1);
+        _memory.Pull(TextOffset, (length + 1) * 2);
+        return _memory.ReadUnicode(TextOffset, length);
     }
 
     /// <summary>Sends a message to the list view and returns its result.</summary>
