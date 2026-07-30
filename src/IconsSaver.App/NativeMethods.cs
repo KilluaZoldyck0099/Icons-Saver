@@ -42,4 +42,26 @@ internal static class NativeMethods
     [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true, EntryPoint = "PostMessageW")]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool PostMessage(IntPtr window, uint message, IntPtr wParam, IntPtr lParam);
+
+    // ------------------------------------------------------------------ theming
+
+    /// <summary>Paints the title bar and window frame dark. Windows 10 2004 and later.</summary>
+    public const int DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
+
+    /// <summary>The attribute number used by Windows 10 builds before 19041.</summary>
+    public const int DWMWA_USE_IMMERSIVE_DARK_MODE_LEGACY = 19;
+
+    [DllImport("dwmapi.dll")]
+    public static extern int DwmSetWindowAttribute(IntPtr window, int attribute, ref int value, int size);
+
+    /// <summary>
+    /// Repoints a control at a different visual style class.
+    /// </summary>
+    /// <remarks>
+    /// Passing <c>DarkMode_Explorer</c> is what gives a list view dark scroll bars and dark hover
+    /// highlights. There is no managed equivalent: those parts are drawn by the theme engine, not
+    /// by the control's own colour properties.
+    /// </remarks>
+    [DllImport("uxtheme.dll", CharSet = CharSet.Unicode)]
+    public static extern int SetWindowTheme(IntPtr window, string? subAppName, string? subIdList);
 }
