@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IconsSaver.Core", "src\Icon
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IconsSaver.App", "src\IconsSaver.App\IconsSaver.App.csproj", "{D153B925-8415-45FD-AE3B-786E299EC426}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IconsSaver.Cli", "src\IconsSaver.Cli\IconsSaver.Cli.csproj", "{3EFDAAAD-A336-4F1D-9B78-DC8031C350D1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -26,9 +28,14 @@ Global
 		{D153B925-8415-45FD-AE3B-786E299EC426}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D153B925-8415-45FD-AE3B-786E299EC426}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D153B925-8415-45FD-AE3B-786E299EC426}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3EFDAAAD-A336-4F1D-9B78-DC8031C350D1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3EFDAAAD-A336-4F1D-9B78-DC8031C350D1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3EFDAAAD-A336-4F1D-9B78-DC8031C350D1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3EFDAAAD-A336-4F1D-9B78-DC8031C350D1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{99569A31-FF37-4E0A-B9F5-32C3BACAE293} = {55961290-7684-4245-BEB2-1E73DF9FB36C}
 		{D153B925-8415-45FD-AE3B-786E299EC426} = {55961290-7684-4245-BEB2-1E73DF9FB36C}
+		{3EFDAAAD-A336-4F1D-9B78-DC8031C350D1} = {55961290-7684-4245-BEB2-1E73DF9FB36C}
 	EndGlobalSection
 EndGlobal

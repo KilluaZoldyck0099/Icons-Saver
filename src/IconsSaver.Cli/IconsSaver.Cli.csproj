@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <RootNamespace>IconsSaver.Cli</RootNamespace>
+    <AssemblyName>iconssaver</AssemblyName>
+    <Description>Command line interface for Icons Saver.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\IconsSaver.Core\IconsSaver.Core.csproj" />
+  </ItemGroup>
+
+</Project>
