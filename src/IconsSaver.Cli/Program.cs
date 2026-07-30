@@ -131,7 +131,12 @@ internal static class Program
                 ? RestoreOptions.Manual
                 : RestoreOptions.Automatic;
 
-        RestoreReport report = service.Restore(snapshot, options);
+        if (!TryReadScope(arguments, snapshot, out RestoreScope scope))
+        {
+            return ExitUsage;
+        }
+
+        RestoreReport report = service.Restore(snapshot, options.Within(scope));
 
         if (report.Outcome == RestoreOutcome.SkippedDisplayMismatch)
         {
@@ -149,6 +154,52 @@ internal static class Program
         }
 
         return ExitOk;
+    }
+
+    /// <summary>
+    /// Reads <c>--monitor</c> or <c>--region</c> into a restore scope.
+    /// </summary>
+    /// <remarks>
+    /// Monitors are addressed by their position in <c>iconssaver-cli show</c>, because a device
+    /// interface path is not something anyone is going to type. A bad value is refused rather than
+    /// quietly ignored: silently restoring the whole desktop when the user asked for one screen is
+    /// the worst possible reading of a typo.
+    /// </remarks>
+    private static bool TryReadScope(CommandLineArgs arguments, LayoutSnapshot snapshot, out RestoreScope scope)
+    {
+        scope = RestoreScope.Everything;
+
+        string? monitor = arguments.Option("monitor", "m");
+        if (monitor is not null)
+        {
+            if (!int.TryParse(monitor, NumberStyles.Integer, CultureInfo.InvariantCulture, out int index) ||
+                index < 1 || index > snapshot.Display.Monitors.Count)
+            {
+                ConsoleOutput.Error(
+                    $"--monitor must be between 1 and {snapshot.Display.Monitors.Count}. " +
+                    $"Run 'iconssaver-cli show {snapshot.Id[..8]}' to see them.");
+                return false;
+            }
+
+            scope = RestoreScope.ForMonitor(snapshot.Display.Monitors[index - 1]);
+            return true;
+        }
+
+        string? region = arguments.Option("region", "r");
+        if (region is not null)
+        {
+            string[] parts = region.Split(',', StringSplitOptions.TrimEntries);
+            if (parts.Length != 4 || !parts.All(p => int.TryParse(p, NumberStyles.Integer, CultureInfo.InvariantCulture, out _)))
+            {
+                ConsoleOutput.Error("--region takes four whole numbers: x,y,width,height");
+                return false;
+            }
+
+            int[] numbers = parts.Select(p => int.Parse(p, CultureInfo.InvariantCulture)).ToArray();
+            scope = RestoreScope.ForRegion(new IconRegion(numbers[0], numbers[1], numbers[2], numbers[3]));
+        }
+
+        return true;
     }
 
     private static int Show(LayoutService service, CommandLineArgs arguments)
@@ -173,6 +224,18 @@ internal static class Program
         ConsoleOutput.Detail($"  icons     {snapshot.IconCount}");
         ConsoleOutput.Detail($"  display   {snapshot.Display}");
         ConsoleOutput.Detail($"  view      {snapshot.ViewOptions}");
+        ConsoleOutput.Line();
+
+        ConsoleOutput.Line("Monitors (the number is what --monitor takes):");
+        for (int index = 0; index < snapshot.Display.Monitors.Count; index++)
+        {
+            MonitorDescriptor monitor = snapshot.Display.Monitors[index];
+            IconRegion region = IconRegion.ForMonitor(snapshot.Display, monitor);
+            int held = snapshot.Icons.Count(icon => region.Contains(icon.Position));
+
+            ConsoleOutput.Detail($"  {index + 1}  {monitor}  -  {held} icons  -  region {region}");
+        }
+
         ConsoleOutput.Line();
 
         ConsoleOutput.Table(
@@ -326,6 +389,9 @@ internal static class Program
         ConsoleOutput.Line("  --name, -n <text>      Name to save the layout under");
         ConsoleOutput.Line("  --force, -f            Restore even onto a different display setup");
         ConsoleOutput.Line("  --dry-run              Report what a restore would do, without moving anything");
+        ConsoleOutput.Line("  --monitor, -m <n>      Restore only the icons belonging to one screen");
+        ConsoleOutput.Line("                         (the number comes from 'show')");
+        ConsoleOutput.Line("  --region <x,y,w,h>     Restore only the icons saved inside a rectangle");
         return ExitOk;
     }
 }
