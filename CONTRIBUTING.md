@@ -32,10 +32,10 @@ the machine running it is not a test anyone will enjoy. If you change how positi
 read or written, verify by hand:
 
 ```powershell
-iconssaver save "before my change"
+iconssaver-cli save "before my change"
 # move a couple of icons around
-iconssaver restore --dry-run
-iconssaver restore
+iconssaver-cli restore --dry-run
+iconssaver-cli restore
 ```
 
 A restore that reports `Moved N of N matched icons` and visibly puts the icons back is the
@@ -61,6 +61,6 @@ docs: explain the 16-bit coordinate trap
 
 ## Reporting a bug
 
-Include the output of `iconssaver status`, and the relevant part of
+Include the output of `iconssaver-cli status`, and the relevant part of
 `%APPDATA%\IconsSaver\logs\iconssaver.log` if there is one. Both say more about a failed
 restore than a description can.

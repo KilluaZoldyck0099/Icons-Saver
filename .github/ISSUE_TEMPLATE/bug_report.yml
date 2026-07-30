@@ -7,7 +7,7 @@ body:
     attributes:
       value: |
         Thanks for taking the time to report this. The two most useful things you can
-        include are the output of `iconssaver status` and the tail of
+        include are the output of `iconssaver-cli status` and the tail of
         `%APPDATA%\IconsSaver\logs\iconssaver.log`.
 
   - type: textarea
@@ -22,7 +22,7 @@ body:
   - type: textarea
     id: status
     attributes:
-      label: Output of `iconssaver status`
+      label: Output of `iconssaver-cli status`
       description: This reports the display arrangement and how many icons the shell is showing.
       render: text
     validations:

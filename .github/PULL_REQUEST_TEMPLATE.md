@@ -14,7 +14,7 @@ Windows version, number of monitors, and whether any of them are scaled.
 -->
 
 - [ ] `dotnet test IconsSaver.sln -c Release` passes
-- [ ] Verified by hand on a real desktop (`iconssaver save`, move icons, `iconssaver restore`)
+- [ ] Verified by hand on a real desktop (`iconssaver-cli save`, move icons, `iconssaver-cli restore`)
 - [ ] Tested on:  <!-- e.g. Windows 11 24H2, 2 monitors, one at 150% -->
 
 ## Checklist

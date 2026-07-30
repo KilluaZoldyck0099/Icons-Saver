@@ -4,7 +4,7 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
     <RootNamespace>IconsSaver.Cli</RootNamespace>
-    <AssemblyName>iconssaver</AssemblyName>
+    <AssemblyName>iconssaver-cli</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <Description>Command line interface for Icons Saver.</Description>
   </PropertyGroup>

@@ -85,7 +85,7 @@ internal static class Program
         IReadOnlyList<LayoutSnapshot> snapshots = service.Snapshots.LoadAll();
         if (snapshots.Count == 0)
         {
-            ConsoleOutput.Warn("No saved layouts yet. Run 'iconssaver save' to make one.");
+            ConsoleOutput.Warn("No saved layouts yet. Run 'iconssaver-cli save' to make one.");
             return ExitOk;
         }
 
@@ -156,7 +156,7 @@ internal static class Program
         string? id = arguments.At(0);
         if (id is null)
         {
-            ConsoleOutput.Error("Usage: iconssaver show <id>");
+            ConsoleOutput.Error("Usage: iconssaver-cli show <id>");
             return ExitUsage;
         }
 
@@ -192,7 +192,7 @@ internal static class Program
         string? id = arguments.At(0);
         if (id is null)
         {
-            ConsoleOutput.Error("Usage: iconssaver delete <id>");
+            ConsoleOutput.Error("Usage: iconssaver-cli delete <id>");
             return ExitUsage;
         }
 
@@ -214,7 +214,7 @@ internal static class Program
 
         if (id is null || path is null)
         {
-            ConsoleOutput.Error("Usage: iconssaver export <id> <file.json>");
+            ConsoleOutput.Error("Usage: iconssaver-cli export <id> <file.json>");
             return ExitUsage;
         }
 
@@ -235,7 +235,7 @@ internal static class Program
         string? path = arguments.At(0);
         if (path is null)
         {
-            ConsoleOutput.Error("Usage: iconssaver import <file.json>");
+            ConsoleOutput.Error("Usage: iconssaver-cli import <file.json>");
             return ExitUsage;
         }
 
@@ -309,7 +309,7 @@ internal static class Program
     {
         ConsoleOutput.Line($"{AppInfo.Name} {AppInfo.Version} - save and restore desktop icon positions");
         ConsoleOutput.Line();
-        ConsoleOutput.Line("Usage: iconssaver <command> [options]");
+        ConsoleOutput.Line("Usage: iconssaver-cli <command> [options]");
         ConsoleOutput.Line();
         ConsoleOutput.Line("Commands:");
         ConsoleOutput.Line("  save [name]            Capture the current icon layout");

@@ -4,7 +4,7 @@ namespace IconsSaver.Cli;
 /// Console writing with a consistent voice: results on stdout, problems on stderr.
 /// </summary>
 /// <remarks>
-/// Keeping diagnostics off stdout means <c>iconssaver list</c> can be piped somewhere without the
+/// Keeping diagnostics off stdout means <c>iconssaver-cli list</c> can be piped somewhere without the
 /// caller having to filter chatter out of the stream.
 /// </remarks>
 internal static class ConsoleOutput

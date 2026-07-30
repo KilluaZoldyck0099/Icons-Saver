@@ -59,7 +59,7 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force dist | Out-Null
-          Copy-Item publish/cli/iconssaver.exe publish/app/ -Force
+          Copy-Item publish/cli/iconssaver-cli.exe publish/app/ -Force
           Copy-Item README.md, LICENSE publish/app/ -Force
           Compress-Archive -Path publish/app/* -DestinationPath "dist/IconsSaver-${{ steps.version.outputs.value }}-win-x64.zip"
 
